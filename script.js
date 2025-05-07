@@ -218,7 +218,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const formattedNextBirthday = nextBirthday.toLocaleDateString();
         
         if (weeksLivedCount > 0) {
-            infoElement.textContent = `From ${formattedBirthDate} to ${formattedCurrentDate}, you have lived ${actualYearsLived} years and ${weeksInCurrentYearLived} weeks (${weeksLivedCount} weeks total). ${weeksUntilBirthdayCount} weeks until your next birthday on ${formattedNextBirthday}.`;
+            infoElement.textContent = `As of ${formattedCurrentDate}, counting from the week of your birth (${formattedBirthDate}), you have lived through ${actualYearsLived} years and ${weeksInCurrentYearLived} weeks, totaling ${weeksLivedCount} weeks. ${weeksUntilBirthdayCount} weeks until your next birthday on ${formattedNextBirthday}.`;
         } else if (birthDate <= currentDate) { // Born today or in the past, but no full weeks lived yet by this logic
              infoElement.textContent = `Born on ${formattedBirthDate}. Chart shows weeks starting from the Sunday of your birth week. ${weeksUntilBirthdayCount} weeks until your next birthday on ${formattedNextBirthday}.`;
         } else { // Should be caught by the initial check, but as a fallback
