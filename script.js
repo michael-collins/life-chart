@@ -86,56 +86,89 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function generateLifeChart(birthdate) {
-        // Clear the grid first
-        createEmptyGrid();
-        
+        gridContainer.innerHTML = ''; // Clear the grid
+
         const birthDate = new Date(birthdate);
         birthDate.setHours(0, 0, 0, 0);
-        
+
         const currentDate = new Date();
         currentDate.setHours(0, 0, 0, 0);
 
         if (isNaN(birthDate.getTime()) || birthDate > currentDate) {
             infoElement.textContent = "Please enter a valid past birthdate.";
-            // Clear year labels if any from previous valid run
-            const rowsForLabelClear = gridContainer.querySelectorAll('.row');
-            rowsForLabelClear.forEach(row => {
-                const existingLabel = row.querySelector('.year-label');
-                if (existingLabel) {
-                    row.removeChild(existingLabel);
-                }
-            });
             return;
+        }
+
+        const millisecondsInWeek = 7 * 24 * 60 * 60 * 1000;
+
+        // Pre-calculate Sundays of the week of the Nth birthday
+        const yearStartSundays = [];
+        for (let i = 0; i <= YEARS_TO_DISPLAY; i++) { // Iterate up to YEARS_TO_DISPLAY for the end of the last year
+            const NthBirthday = new Date(birthDate);
+            NthBirthday.setFullYear(birthDate.getFullYear() + i);
+            const sundayOfWeekOfNthBirthday = new Date(NthBirthday);
+            sundayOfWeekOfNthBirthday.setDate(NthBirthday.getDate() - NthBirthday.getDay()); // Get Sunday
+            sundayOfWeekOfNthBirthday.setHours(0,0,0,0);
+            yearStartSundays.push(sundayOfWeekOfNthBirthday);
+        }
+
+        // Create the grid structure dynamically using yearStartSundays
+        for (let yearIdx = 0; yearIdx < YEARS_TO_DISPLAY; yearIdx++) {
+            const rowElement = document.createElement('div');
+            rowElement.className = 'row';
+            rowElement.setAttribute('data-year', yearIdx);
+
+            // Calculate weeks in this year of life based on the interval between yearStartSundays
+            let weeksInThisYearOfLife = Math.round((yearStartSundays[yearIdx+1] - yearStartSundays[yearIdx]) / millisecondsInWeek);
+            
+            if (weeksInThisYearOfLife <= 0) weeksInThisYearOfLife = 52; // Fallback
+            if (weeksInThisYearOfLife > 53) weeksInThisYearOfLife = 53; // Cap
+
+            for (let weekIdx = 0; weekIdx < weeksInThisYearOfLife; weekIdx++) {
+                const boxElement = document.createElement('div');
+                boxElement.className = 'box';
+                boxElement.setAttribute('data-week', weekIdx);
+                rowElement.appendChild(boxElement);
+            }
+            gridContainer.appendChild(rowElement);
         }
         
         const weeksArray = []; 
-        const upcomingWeeksArray = [];
-        const millisecondsInWeek = 7 * 24 * 60 * 60 * 1000;
+        if (yearStartSundays.length > 0 && yearStartSundays[0] < yearStartSundays[YEARS_TO_DISPLAY]) {
+            let iterDateLived = new Date(yearStartSundays[0]); // Start from Sunday of birth week
 
-        // Calculate weeks lived
-        let iterDateLived = new Date(birthDate);
-        iterDateLived.setDate(iterDateLived.getDate() - iterDateLived.getDay()); // Align to Sunday of birth week
-
-        while (iterDateLived <= currentDate) {
-            const age = calculateAge(iterDateLived, birthDate);
-            if (age >= 0) {
-                const NthBirthday = new Date(birthDate);
-                NthBirthday.setFullYear(birthDate.getFullYear() + age);
-                const startOfWeekOfNthBirthday = new Date(NthBirthday);
-                startOfWeekOfNthBirthday.setDate(NthBirthday.getDate() - NthBirthday.getDay());
-                const weekOfYear = Math.floor((iterDateLived - startOfWeekOfNthBirthday) / millisecondsInWeek);
-
-                if (weekOfYear >= 0 && age < YEARS_TO_DISPLAY) { // Ensure age is within grid bounds
-                    weeksArray.push({
-                        date: new Date(iterDateLived),
-                        yearOfLife: age,
-                        weekOfYear: weekOfYear
-                    });
+            while (iterDateLived <= currentDate && iterDateLived < yearStartSundays[YEARS_TO_DISPLAY]) {
+                let currentYearOfLife = -1;
+                // Determine currentYearOfLife based on iterDateLived and yearStartSundays
+                for (let y = 0; y < YEARS_TO_DISPLAY; y++) {
+                    if (yearStartSundays[y+1] && iterDateLived >= yearStartSundays[y] && iterDateLived < yearStartSundays[y+1]) {
+                        currentYearOfLife = y;
+                        break;
+                    }
                 }
+
+                if (currentYearOfLife !== -1) {
+                    const startOfWeekForThisYearOfLife = yearStartSundays[currentYearOfLife];
+                    const weekOfYear = Math.floor((iterDateLived.getTime() - startOfWeekForThisYearOfLife.getTime()) / millisecondsInWeek);
+
+                    const endOfWeek = new Date(iterDateLived);
+                    endOfWeek.setDate(iterDateLived.getDate() + 6); // Saturday of this week
+
+                    // Add if this week is actually part of life (i.e., person was born by the end of this week)
+                    // and the weekOfYear is valid for the row.
+                    if (endOfWeek >= birthDate && weekOfYear >= 0) {
+                        weeksArray.push({
+                            date: new Date(iterDateLived),
+                            yearOfLife: currentYearOfLife,
+                            weekOfYear: weekOfYear
+                        });
+                    }
+                }
+                iterDateLived.setDate(iterDateLived.getDate() + 7);
             }
-            iterDateLived.setDate(iterDateLived.getDate() + 7);
         }
         
+        const upcomingWeeksArray = [];
         // Calculate next birthday
         let nextBirthdayYearCalc = currentDate.getFullYear();
         if (currentDate.getMonth() > birthDate.getMonth() || 
@@ -192,7 +225,7 @@ document.addEventListener('DOMContentLoaded', function() {
             infoElement.textContent = "Chart is for past birthdates.";
         }
         
-        const rows = gridContainer.querySelectorAll('.row');
+        const rows = gridContainer.querySelectorAll('.row'); // Get the newly created rows
         
         weeksArray.forEach(week => {
             if (typeof week.yearOfLife === 'number' && week.yearOfLife >= 0 && week.yearOfLife < rows.length) {
