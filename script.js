@@ -259,7 +259,8 @@ document.addEventListener('DOMContentLoaded', function() {
             if (existingLabel) {
                 row.removeChild(existingLabel);
             }
-            if (index <= maxYearToLabel && index < YEARS_TO_DISPLAY) {
+            // Ensure all rows up to YEARS_TO_DISPLAY are labeled
+            if (index < YEARS_TO_DISPLAY) {
                 const yearLabel = document.createElement('div');
                 yearLabel.className = 'year-label';
                 yearLabel.textContent = index + 1; 
