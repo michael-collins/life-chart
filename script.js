@@ -76,7 +76,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             const yearLabel = document.createElement('div');
             yearLabel.className = 'year-label';
-            yearLabel.textContent = year + 1;
+            yearLabel.textContent = year; // Changed from year + 1 to year
             rowElement.appendChild(yearLabel); // Add label first
 
             const weeksPerRow = 53; // Max possible weeks for initial drawing
@@ -102,18 +102,30 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
+        // Log for debugging
+        console.log("Birth date:", birthDate.format("YYYY-MM-DD"));
+        console.log("Current date:", currentDate.format("YYYY-MM-DD"));
+
         // Function to calculate precise age in completed years
         function getCompletedYears(start, end) {
-            // First get raw year difference
-            const rawYears = end.diff(start, 'year');
+            // Calculate year difference (2025 - 1985 = 40)
+            const yearDiff = end.year() - start.year();
             
-            // Check if birthday has occurred this year
-            const birthdayThisYear = start.month() < end.month() || 
-                                   (start.month() === end.month() && 
-                                    start.date() <= end.date());
+            // Check if birthday has occurred this year:
+            // If current month is less than birth month, or
+            // If same month but current day is less than birth day
+            const birthdayNotOccurredYet = end.month() < start.month() || 
+                                       (end.month() === start.month() && 
+                                        end.date() < start.date());
             
-            // If birthday hasn't occurred yet this year, subtract 1 from raw years
-            return birthdayThisYear ? rawYears : rawYears - 1;
+            // Subtract 1 year if birthday hasn't occurred yet this year
+            const completedYears = birthdayNotOccurredYet ? yearDiff - 1 : yearDiff;
+            
+            console.log("Year difference:", yearDiff);
+            console.log("Birthday hasn't occurred yet this year:", birthdayNotOccurredYet);
+            console.log("Completed years:", completedYears);
+            
+            return completedYears;
         }
 
         const sundayOfBirthDateWeek = birthDate.weekday(0);
@@ -125,8 +137,15 @@ document.addEventListener('DOMContentLoaded', function() {
         const yearBoundaries = [];
         for (let yearIdx = 0; yearIdx <= yearsToDisplay; yearIdx++) {
             // The start of a "year of life" is the Sunday of the week of the anniversary
-            const anniversary = birthDate.add(yearIdx, 'year');
+            // Make sure to create a new dayjs object for each calculation
+            const anniversary = dayjs(birthDate).add(yearIdx, 'year');
             yearBoundaries.push(anniversary.weekday(0));
+        }
+
+        // Log first few boundaries for debugging
+        console.log("Year boundaries (first 5):");
+        for (let i = 0; i < Math.min(5, yearBoundaries.length); i++) {
+            console.log(`Year ${i}: ${yearBoundaries[i].format("YYYY-MM-DD")}`);
         }
 
         for (let yearIdx = 0; yearIdx < yearsToDisplay; yearIdx++) {
@@ -136,7 +155,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             const yearLabel = document.createElement('div');
             yearLabel.className = 'year-label';
-            yearLabel.textContent = yearIdx + 1;
+            yearLabel.textContent = yearIdx; // Changed from yearIdx + 1 to yearIdx
             rowElement.appendChild(yearLabel);
 
             // Use our precomputed boundaries to calculate weeks per row
@@ -175,6 +194,11 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             return -1; // Before birth
         }
+
+        // Log to verify the current Sunday is assigned to the right year of life
+        const currentSunday = currentDate.weekday(0);
+        console.log("Current Sunday:", currentSunday.format("YYYY-MM-DD"));
+        console.log("Maps to year of life:", findYearOfLifeForDate(currentSunday));
 
         let currentIterSunday = dayjs(sundayOfBirthDateWeek);
 
@@ -243,7 +267,9 @@ document.addEventListener('DOMContentLoaded', function() {
         // Use our precise age calculation rather than Day.js diff for the text
         let weeksInCurrentYearLivedText = 0;
         if (weeksLivedCount > 0) {
-            const startSundayOfCurrentAgeYear = yearBoundaries[actualYearsLived];
+            // Make sure we're not accessing beyond array bounds
+            const yearIndex = Math.min(actualYearsLived, yearBoundaries.length - 1);
+            const startSundayOfCurrentAgeYear = yearBoundaries[yearIndex];
             const lastFilledOrCurrentSunday = dayjs.min(currentDate.weekday(0), currentIterSunday.subtract(1,'week'));
 
             if (lastFilledOrCurrentSunday.isSameOrAfter(startSundayOfCurrentAgeYear)) {
