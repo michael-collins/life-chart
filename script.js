@@ -12,6 +12,12 @@ document.addEventListener('DOMContentLoaded', function() {
     const urlParams = new URLSearchParams(window.location.search);
     const birthdateFromUrl = urlParams.get('birthdate');
     const endYearFromUrl = urlParams.get('endYear');
+    const minimalView = urlParams.get('minimal') === 'true';
+    
+    // Apply minimal view if requested via URL param
+    if (minimalView) {
+        applyMinimalView();
+    }
 
     // Set input values from URL if available
     if (birthdateFromUrl) {
@@ -41,6 +47,12 @@ document.addEventListener('DOMContentLoaded', function() {
             const newUrl = new URL(window.location.href);
             newUrl.searchParams.set('birthdate', birthdate);
             newUrl.searchParams.set('endYear', yearsToDisplay);
+            
+            // Preserve minimal view parameter if it exists
+            if (minimalView) {
+                newUrl.searchParams.set('minimal', 'true');
+            }
+            
             window.history.pushState({}, '', newUrl);
             generateLifeChart(birthdate, yearsToDisplay);
         } else {
@@ -57,6 +69,14 @@ document.addEventListener('DOMContentLoaded', function() {
             const endYearValue = parseInt(endYearInput.value);
             if (!isNaN(endYearValue) && endYearValue > 0) {
                 url.searchParams.set('endYear', endYearValue);
+            }
+            
+            // Provide option to copy minimal view link
+            const includeMinimal = confirm("Include minimal view parameter in the link?");
+            if (includeMinimal) {
+                url.searchParams.set('minimal', 'true');
+            } else {
+                url.searchParams.delete('minimal');
             }
             
             navigator.clipboard.writeText(url.href)
@@ -289,6 +309,35 @@ document.addEventListener('DOMContentLoaded', function() {
              infoElement.textContent = `Born on ${formattedBirthDate}. Chart shows weeks starting from the Sunday of your birth week. ${textualWeeksUntilBirthday} weeks until your next birthday on ${formattedNextBirthday}.`;
         } else {
             infoElement.textContent = "Chart is for past birthdates.";
+        }
+    }
+    
+    // Function to hide UI elements for minimal view
+    function applyMinimalView() {
+        const elementsToHide = [
+            document.querySelector('.form-container'),
+            document.querySelector('.copy-link'),
+            document.querySelector('.legend'),
+            document.querySelector('.chart-explanation'),
+            document.querySelector('#info'),
+            document.querySelector('h1')
+        ];
+        
+        elementsToHide.forEach(element => {
+            if (element) element.style.display = 'none';
+        });
+        
+        
+        const container = document.querySelector('.container');
+        if (container) {
+            container.style.maxWidth = 'none';
+            container.style.margin = '0';
+            container.style.padding = '0';
+        }
+        
+        const gridContainer = document.querySelector('.grid-container');
+        if (gridContainer) {
+            gridContainer.style.margin = '0';
         }
     }
 });
